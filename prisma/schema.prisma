@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  accounts      Account[]
+  sessions      Session[]
+  profile       Profile?
+  progress      Progress[]
+  testResults   TestResult[]
+  achievements  UserAchievement[]
+  alerts        MetricAlert[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Profile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  totalPoints     Int      @default(0)
+  level           Int      @default(1)
+  completedTasks  Int      @default(0)
+  totalTasks      Int      @default(0)
+  successRate     Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model KnowledgeCategory {
+  id          String    @id @default(cuid())
+  name        String
+  description String
+  order       Int
+  topics      Topic[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Topic {
+  id          String    @id @default(cuid())
+  categoryId  String
+  name        String
+  description String
+  content     String    @db.Text
+  order       Int
+  category    KnowledgeCategory @relation(fields: [categoryId], references: [id])
+  tests       Test[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Test {
+  id           String       @id @default(cuid())
+  topicId      String
+  name         String
+  description  String
+  difficulty   String       // easy, medium, hard
+  timeLimit    Int         // в минутах
+  passingScore Int         // минимальный процент для прохождения
+  questions    Question[]
+  results      TestResult[]
+  topic        Topic       @relation(fields: [topicId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Question {
+  id           String   @id @default(cuid())
+  testId       String
+  text         String
+  type         String   // multiple_choice, single_choice, text
+  options      Json?    // для вопросов с вариантами ответов
+  correctAnswer String
+  explanation  String   // объяснение правильного ответа
+  points       Int
+  test         Test     @relation(fields: [testId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model TestResult {
+  id          String   @id @default(cuid())
+  userId      String
+  testId      String
+  score       Int
+  maxScore    Int
+  answers     Json     // сохраненные ответы пользователя
+  timeSpent   Int      // в секундах
+  passed      Boolean
+  user        User     @relation(fields: [userId], references: [id])
+  test        Test     @relation(fields: [testId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Progress {
+  id          String    @id @default(cuid())
+  userId      String
+  topicId     String
+  status      String    // not_started, in_progress, completed
+  completedAt DateTime?
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Achievement {
+  id          String    @id @default(cuid())
+  name        String
+  description String
+  icon        String
+  points      Int
+  condition   Json      // условия получения достижения
+  users       UserAchievement[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model UserAchievement {
+  id            String    @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime  @default(now())
+  user          User      @relation(fields: [userId], references: [id])
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
+}
+
+model Metric {
+  id          String       @id @default(cuid())
+  name        String
+  category    String
+  data        MetricData[]
+  alerts      MetricAlert[]
+}
+
+model MetricData {
+  id        String   @id @default(cuid())
+  metricId  String
+  value     Float
+  date      DateTime
+  metric    Metric   @relation(fields: [metricId], references: [id], onDelete: Cascade)
+}
+
+model MetricAlert {
+  id        String   @id @default(cuid())
+  userId    String
+  metricId  String
+  message   String
+  severity  String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metric    Metric   @relation(fields: [metricId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String
+  complexity  Complexity
+  points      Int
+  status      TaskStatus @default(AVAILABLE)
+  dueDate     DateTime?
+  completedAt DateTime?
+  steps       TaskStep[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model TaskStep {
+  id          String   @id @default(cuid())
+  taskId      String
+  title       String
+  isCompleted Boolean  @default(false)
+  completedAt DateTime?
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+enum Complexity {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum TaskStatus {
+  AVAILABLE
+  IN_PROGRESS
+  COMPLETED
+  LOCKED
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+} 
