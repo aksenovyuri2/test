@@ -1,58 +1,89 @@
 import React from 'react';
 
 interface Alert {
-  id: number;
+  id: string;
   metric: string;
   message: string;
-  severity: 'high' | 'medium' | 'low';
-  timestamp: string;
+  severity: 'critical' | 'warning' | 'info';
+  timestamp: Date | string;
+  isRead: boolean;
 }
 
 interface MetricAlertProps {
-  alert: Alert;
+  alerts: Alert[];
+  onMarkAsRead?: (alertId: string) => void;
 }
 
-export const MetricAlert: React.FC<MetricAlertProps> = ({ alert }) => {
-  const getSeverityColor = (severity: string) => {
+export const MetricAlert: React.FC<MetricAlertProps> = ({ alerts, onMarkAsRead }) => {
+  const getSeverityStyles = (severity: string) => {
     switch (severity) {
-      case 'high':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
+      case 'critical':
+        return 'border-red-500 bg-red-50';
+      case 'warning':
+        return 'border-yellow-500 bg-yellow-50';
+      case 'info':
+        return 'border-blue-500 bg-blue-50';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'border-gray-300';
     }
   };
 
-  const getSeverityText = (severity: string) => {
+  const getSeverityIcon = (severity: string) => {
     switch (severity) {
-      case 'high':
-        return 'Высокий приоритет';
-      case 'medium':
-        return 'Средний приоритет';
-      case 'low':
-        return 'Низкий приоритет';
+      case 'critical':
+        return '⚠️';
+      case 'warning':
+        return '⚠';
+      case 'info':
+        return 'ℹ️';
       default:
-        return 'Неизвестный приоритет';
+        return '';
     }
+  };
+
+  const formatDate = (date: Date | string) => {
+    const d = new Date(date);
+    return d.toLocaleString();
   };
 
   return (
-    <div className={`border rounded-lg p-4 ${getSeverityColor(alert.severity)}`}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center">
-          <h3 className="text-lg font-medium mr-2">{alert.metric}</h3>
-          <span className="text-sm font-medium">
-            {getSeverityText(alert.severity)}
-          </span>
-        </div>
-        <span className="text-sm text-gray-600">
-          {new Date(alert.timestamp).toLocaleString()}
-        </span>
-      </div>
-      <p className="text-gray-700">{alert.message}</p>
+    <div className="space-y-4">
+      {alerts.length === 0 ? (
+        <p className="text-gray-500 p-4 text-center bg-gray-50 rounded-lg">
+          Нет активных уведомлений.
+        </p>
+      ) : (
+        alerts.map((alert) => (
+          <div 
+            key={alert.id} 
+            className={`border-l-4 rounded-md p-4 shadow-sm relative ${
+              getSeverityStyles(alert.severity)
+            } ${!alert.isRead ? 'ring-2 ring-blue-200' : ''}`}
+          >
+            <div className="flex items-start">
+              <span className="text-xl mr-3">{getSeverityIcon(alert.severity)}</span>
+              <div className="flex-1">
+                <div className="flex justify-between items-start">
+                  <h3 className="text-lg font-medium">{alert.metric}</h3>
+                  <span className="text-xs text-gray-500">
+                    {formatDate(alert.timestamp)}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700 mt-1">{alert.message}</p>
+              </div>
+            </div>
+            
+            {!alert.isRead && onMarkAsRead && (
+              <button
+                onClick={() => onMarkAsRead(alert.id)}
+                className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+              >
+                Отметить как прочитанное
+              </button>
+            )}
+          </div>
+        ))
+      )}
     </div>
   );
 }; 

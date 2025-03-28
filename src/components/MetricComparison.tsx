@@ -1,49 +1,62 @@
 import React from 'react';
 
-interface Metric {
-  id: number;
+interface ComparisonData {
   metric: string;
   currentValue: number;
   previousValue: number;
-  change: number;
+  unit?: string;
+  changePercentage: number;
 }
 
 interface MetricComparisonProps {
-  metrics: Metric[];
+  comparisonData: ComparisonData[];
 }
 
-export const MetricComparison: React.FC<MetricComparisonProps> = ({ metrics }) => {
-  const getChangeColor = (change: number) => {
-    if (change > 0) return 'text-green-600';
-    if (change < 0) return 'text-red-600';
-    return 'text-gray-600';
-  };
-
+export const MetricComparison: React.FC<MetricComparisonProps> = ({ comparisonData }) => {
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold mb-4">Сравнение метрик</h2>
-      <div className="space-y-4">
-        {metrics.map((metric) => (
-          <div key={metric.id} className="border rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-medium">{metric.metric}</h3>
-              <span className={`font-semibold ${getChangeColor(metric.change)}`}>
-                {metric.change > 0 ? '+' : ''}{metric.change}%
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-500">Текущее значение</p>
-                <p className="text-lg font-medium">{metric.currentValue}</p>
+    <div className="space-y-4">
+      {comparisonData.length === 0 ? (
+        <p className="text-gray-500 p-4 text-center bg-gray-50 rounded-lg">
+          Нет данных для сравнения.
+        </p>
+      ) : (
+        comparisonData.map((data, index) => {
+          const isImproved = data.changePercentage > 0;
+          
+          return (
+            <div key={index} className="bg-white rounded-lg shadow-md p-4">
+              <h3 className="text-lg font-medium mb-2">{data.metric}</h3>
+              
+              <div className="grid grid-cols-2 gap-4 mb-3">
+                <div>
+                  <p className="text-sm text-gray-500">Текущее значение</p>
+                  <p className="text-xl font-semibold">
+                    {data.currentValue}{data.unit && <span className="text-sm ml-1">{data.unit}</span>}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Предыдущее значение</p>
+                  <p className="text-xl font-semibold">
+                    {data.previousValue}{data.unit && <span className="text-sm ml-1">{data.unit}</span>}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Предыдущее значение</p>
-                <p className="text-lg font-medium">{metric.previousValue}</p>
+              
+              <div className="flex items-center">
+                <span 
+                  className={`inline-flex items-center px-2 py-1 text-sm rounded-full 
+                    ${isImproved ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}
+                >
+                  {isImproved ? '▲' : '▼'} {Math.abs(data.changePercentage)}%
+                </span>
+                <span className="ml-2 text-sm text-gray-500">
+                  {isImproved ? 'Улучшение' : 'Ухудшение'} по сравнению с предыдущим периодом
+                </span>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          );
+        })
+      )}
     </div>
   );
 }; 

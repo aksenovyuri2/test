@@ -1,43 +1,36 @@
 {
-  "name": "product-metrics-platform",
+  "name": "metrics-platform",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "db:seed": "ts-node prisma/seed.ts"
+    "lint": "next lint"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@headlessui/react": "^1.7.18",
-    "@heroicons/react": "^2.1.1",
-    "@prisma/client": "^5.22.0",
+    "@auth/prisma-adapter": "^1.0.0",
+    "@prisma/client": "^5.0.0",
     "@types/bcryptjs": "^2.4.6",
-    "@types/json2csv": "^5.0.7",
-    "@types/xlsx": "^0.0.35",
     "bcryptjs": "^3.0.2",
-    "chart.js": "^4.4.1",
-    "date-fns": "^3.3.1",
-    "json2csv": "^6.0.0-alpha.2",
-    "next": "14.1.0",
-    "next-auth": "^4.24.11",
-    "react": "^18.2.0",
-    "react-chartjs-2": "^5.2.0",
-    "react-dom": "^18.2.0",
-    "xlsx": "^0.18.5"
+    "framer-motion": "^10.0.0",
+    "next": "^15.2.4",
+    "next-auth": "^4.24.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@types/node": "^20.11.19",
-    "@types/react": "^18.2.57",
-    "@types/react-dom": "^18.2.19",
-    "autoprefixer": "^10.4.17",
-    "eslint": "^8.56.0",
-    "eslint-config-next": "14.1.0",
-    "postcss": "^8.4.35",
-    "prisma": "^5.22.0",
-    "tailwindcss": "^3.4.1",
+    "@types/node": "^20.17.28",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "autoprefixer": "^10.0.0",
+    "postcss": "^8.0.0",
+    "prisma": "^5.0.0",
+    "tailwindcss": "^3.0.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.8.2"
   }
 }

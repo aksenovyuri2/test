@@ -1,173 +1,178 @@
 import React, { useState } from 'react';
 
-interface Metric {
-  id: number;
+interface MetricOption {
+  id: string;
   name: string;
+  category?: string;
 }
 
 interface DataExportProps {
-  availableMetrics: Metric[];
+  availableMetrics: MetricOption[];
+  onExport?: (
+    selectedMetrics: string[], 
+    format: 'csv' | 'excel' | 'json', 
+    dateRange: { from: string, to: string }
+  ) => void;
 }
 
-export const DataExport: React.FC<DataExportProps> = ({ availableMetrics }) => {
-  const [selectedMetrics, setSelectedMetrics] = useState<number[]>([]);
-  const [format, setFormat] = useState<'csv' | 'excel' | 'json'>('csv');
-  const [dateRange, setDateRange] = useState({
-    start: '',
-    end: '',
+export const DataExport: React.FC<DataExportProps> = ({ availableMetrics, onExport }) => {
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>([]);
+  const [dateFrom, setDateFrom] = useState<string>(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - 1);
+    return date.toISOString().split('T')[0];
   });
+  const [dateTo, setDateTo] = useState<string>(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+  const [format, setFormat] = useState<'csv' | 'excel' | 'json'>('csv');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleMetricToggle = (metricId: number) => {
-    setSelectedMetrics((prev) =>
-      prev.includes(metricId)
-        ? prev.filter((id) => id !== metricId)
-        : [...prev, metricId]
-    );
+  const handleMetricChange = (metricId: string) => {
+    if (selectedMetrics.includes(metricId)) {
+      setSelectedMetrics(selectedMetrics.filter(id => id !== metricId));
+    } else {
+      setSelectedMetrics([...selectedMetrics, metricId]);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedMetrics.length === availableMetrics.length) {
+      setSelectedMetrics([]);
+    } else {
+      setSelectedMetrics(availableMetrics.map(metric => metric.id));
+    }
   };
 
   const handleExport = async () => {
-    if (selectedMetrics.length === 0) {
-      alert('Пожалуйста, выберите хотя бы одну метрику');
-      return;
-    }
-
-    if (!dateRange.start || !dateRange.end) {
-      alert('Пожалуйста, выберите диапазон дат');
-      return;
-    }
-
+    if (!onExport || selectedMetrics.length === 0) return;
+    
+    setIsLoading(true);
     try {
-      const response = await fetch('/api/export', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          metrics: selectedMetrics,
-          format,
-          dateRange: {
-            start: new Date(dateRange.start),
-            end: new Date(dateRange.end),
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Ошибка при экспорте данных');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `metrics-export.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      await onExport(
+        selectedMetrics, 
+        format, 
+        { from: dateFrom, to: dateTo }
+      );
     } catch (error) {
-      console.error('Ошибка при экспорте:', error);
-      alert('Произошла ошибка при экспорте данных');
+      console.error('Error exporting data', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // Group metrics by category
+  const metricsByCategory = availableMetrics.reduce((acc, metric) => {
+    const category = metric.category || 'Общее';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(metric);
+    return acc;
+  }, {} as Record<string, MetricOption[]>);
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold mb-4">Экспорт данных</h2>
-      
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-medium mb-2">Выберите метрики</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {availableMetrics.map((metric) => (
-              <label
-                key={metric.id}
-                className="flex items-center space-x-2 p-2 border rounded hover:bg-gray-50 cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedMetrics.includes(metric.id)}
-                  onChange={() => handleMetricToggle(metric.id)}
-                  className="rounded text-blue-600 focus:ring-blue-500"
-                />
-                <span>{metric.name}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-medium mb-2">Выберите формат</h3>
-          <div className="flex space-x-4">
-            <label className="flex items-center space-x-2">
+    <div className="bg-white rounded-lg shadow-md p-5">
+      <div className="mb-5">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Выберите формат экспорта
+        </label>
+        <div className="flex space-x-4">
+          {(['csv', 'excel', 'json'] as const).map((f) => (
+            <label key={f} className="inline-flex items-center">
               <input
                 type="radio"
-                checked={format === 'csv'}
-                onChange={() => setFormat('csv')}
-                className="text-blue-600 focus:ring-blue-500"
+                value={f}
+                checked={format === f}
+                onChange={() => setFormat(f)}
+                className="form-radio h-4 w-4 text-blue-600"
               />
-              <span>CSV</span>
+              <span className="ml-2 text-gray-700">{f.toUpperCase()}</span>
             </label>
-            <label className="flex items-center space-x-2">
-              <input
-                type="radio"
-                checked={format === 'excel'}
-                onChange={() => setFormat('excel')}
-                className="text-blue-600 focus:ring-blue-500"
-              />
-              <span>Excel</span>
-            </label>
-            <label className="flex items-center space-x-2">
-              <input
-                type="radio"
-                checked={format === 'json'}
-                onChange={() => setFormat('json')}
-                className="text-blue-600 focus:ring-blue-500"
-              />
-              <span>JSON</span>
-            </label>
-          </div>
+          ))}
         </div>
-
-        <div>
-          <h3 className="text-lg font-medium mb-2">Выберите диапазон дат</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Начальная дата
-              </label>
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) =>
-                  setDateRange((prev) => ({ ...prev, start: e.target.value }))
-                }
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Конечная дата
-              </label>
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={(e) =>
-                  setDateRange((prev) => ({ ...prev, end: e.target.value }))
-                }
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={handleExport}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
-          Экспортировать
-        </button>
       </div>
+
+      <div className="mb-5">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Период
+        </label>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">От</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full border border-gray-300 rounded-md p-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">До</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full border border-gray-300 rounded-md p-2 text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-5">
+        <div className="flex justify-between items-center mb-1">
+          <label className="block text-sm font-medium text-gray-700">
+            Выберите метрики
+          </label>
+          <button
+            type="button"
+            onClick={handleSelectAll}
+            className="text-sm text-blue-600 hover:text-blue-800"
+          >
+            {selectedMetrics.length === availableMetrics.length 
+              ? 'Отменить выбор всех' 
+              : 'Выбрать все'}
+          </button>
+        </div>
+        
+        <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md divide-y">
+          {Object.entries(metricsByCategory).map(([category, metrics]) => (
+            <div key={category} className="p-3">
+              <h4 className="font-medium text-sm text-gray-700 mb-2">{category}</h4>
+              <div className="space-y-2">
+                {metrics.map((metric) => (
+                  <div key={metric.id} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id={`metric-${metric.id}`}
+                      checked={selectedMetrics.includes(metric.id)}
+                      onChange={() => handleMetricChange(metric.id)}
+                      className="h-4 w-4 text-blue-600 rounded"
+                    />
+                    <label
+                      htmlFor={`metric-${metric.id}`}
+                      className="ml-2 text-sm text-gray-700"
+                    >
+                      {metric.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button
+        onClick={handleExport}
+        disabled={selectedMetrics.length === 0 || isLoading}
+        className={`w-full py-2 px-4 rounded-md text-white font-medium 
+          ${selectedMetrics.length === 0 || isLoading 
+            ? 'bg-gray-300 cursor-not-allowed' 
+            : 'bg-blue-600 hover:bg-blue-700'}`}
+      >
+        {isLoading ? 'Экспорт...' : 'Экспортировать данные'}
+      </button>
     </div>
   );
 }; 
