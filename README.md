@@ -64,6 +64,27 @@ src/
 └── tests/         # Тесты
 ```
 
+## Экспорт заметок из Granola
+
+Скрипт `scripts/granola-export.mjs` выгружает все заметки из Granola через
+официальный Public API (`https://public-api.granola.ai/v1`). Нужен API-токен
+вида `grn_...` (Settings → Workspace → API access в Granola, тариф Business+).
+
+```bash
+# токен берётся из переменной окружения (см. .env.example)
+export GRANOLA_API_TOKEN="grn_..."
+
+# выгрузка всех заметок + транскриптов в ./granola-export/
+node scripts/granola-export.mjs
+
+# опции
+node scripts/granola-export.mjs --out ./dump --no-transcripts --no-markdown
+```
+
+Результат: `granola-export/notes.json` (полный дамп) и по `.md`-файлу на каждую
+заметку. Каталог `granola-export/` добавлен в `.gitignore` — заметки приватные.
+API возвращает только заметки с готовым AI-саммари и транскриптом.
+
 ## Лицензия
 
 MIT
